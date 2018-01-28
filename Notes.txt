@@ -1,0 +1,348 @@
+1. 安装相关开发工具: 
+	1) 安装pip: easy_install pip, pip升级pip3: pip3 install --upgrade pip; 
+	2) 安装virtualenv: pip install virtualenv
+
+2. 创建项目目录
+    virtualenv webEdu --python=python3.5 #创建python3.5版本的virtual env.
+
+3. 启动vritualenv, cd webEdu -> source /bin/activate 然后用pip freeze查看安装了哪些包
+	然后 pip install django==2.0.1
+
+4. 创建django项目, django-admin.py startproject webEdu, python manage.py migrate
+	python manage.py createsuperuser创建超级用户名和密码,邮箱等
+	python manage.py runserver
+	将工程的主目录改名为src
+
+5. 创建相关的目录结构
+	 webEdu
+		bin
+		lib
+		src
+		static 
+		      static-only
+		      static
+			      css
+				      main.css
+				img
+				javascript
+			media
+	然后打开sublime->save project as,然后找到virtualenv的主目录，输入项目名，点击save.
+	然后点击 add folder to project，然后进入virtualenv的主目录webEdu，选择刚刚新建的src和static
+	然后点击open,现在可以看到sublime的侧边栏里有src和static两个目录
+
+6. 点击terminal,进入到virtualenv,进入到src目录，创建django app:python manage.py startapp profiles
+	此时在src目录下，生成了profiles目录，里面是profiles app的相关文件，进入profiles,修改models.py
+	文件，创建profiles的数据模型,这个用户数据的模型，可以根据自己需要设定。
+	class profile(models.Model):
+	      name = models.CharField(max_length=120)
+		description = models.TextField(default="Description default text")
+		def __str__(self):
+			return self.name
+
+7. 打开src/webEdu/settings.py
+    BASE_DIR实际的值就是src,也就是包含manage.py的目录，就是工程的主目录
+	在INSTALLED_APPS的最下面，加上"profiles"app
+	然后打开terminal，将profiles的models migrate到数据库中，
+	python manage.py makemigrations
+	python manage.py migrate,
+	每创建或者修改一个model，都需要运行上面的两条指令
+
+8. 加profiles的模型加入到admin.py中，以便 admin页面可以处理数据模型
+   from django.contrib import admin
+   # Register your models here.
+   from .models import profile
+   class profileAdmin(admin.ModelAdmin):
+       class Meta:
+	       model = profile
+   admin.site.register(profile, profileAdmin)
+
+9. django中数据类型中null与blank的区别:
+   null 是针对数据库而言，如果 null=True, 表示数据库的该字段可以为空。
+   blank 是针对表单的，如果 blank=True，表示你的表单填写该字段的时候可以不填，
+   比如 admin 界面下增加 model 一条记录的时候。直观的看到就是该字段不是粗体
+
+    Field.null: If True, Django will store empty values as NULL in the database. Default is False.
+	Field.blank: If True, the field is allowed to be blank. Default is False.
+        Note that this is different than null. null is purely database-related, 
+	    whereas blank is validation-related. If a field has blank=True, form validation
+	     will allow entry of an empty value. If a field has blank=False, the field will be required.
+
+10. 设置 url，将所有app的url import 进settings文件所在目录的url,然后写url。这种方式，比较简单。
+    也可以参照tutorial的做法，这上面的做法，感觉不如tutioial上面的好
+	from profiles import views as profile_views
+	
+11. 在app下面，创建templates文件夹，然后再创建app文件夹，然后创建 home.html.
+
+12, 修改settings.py文件，设置 STATIC_ROOT, MEDIA_ROOT, STATICFILES_DIRS
+    if DEBUG:
+	      MEDIA_URL = '/media/'
+		STATIC_ROOT = os.path.join(os.path.dirname(BASE_DIR), "static", "static-only")
+		MEDIA_ROOT = os.path.join(os.path.dirname(BASE_DIR), "static", "media")
+		STATICFILES_DIRS = (
+			 os.path.join(os.path.dirname(BASE_DIR), "static", "static"),  )
+
+		 #STATIC_ROOT:  python manage.py collectstatic
+		      #The absolute path to the directory where collectstatic will collect 
+		      # static files for deployment.If the staticfiles contrib app is 
+			# enabled (as in the default project template), the collectstatic management
+			# com-mand will collect static files into this directory. See the how-to on 
+			# managing static files for more details about usage.
+			# Warning: This should be an initially empty destination directory for collecting
+			# your static files from their permanent locations into one directory for ease of 
+               # deployment; it is not a place to store your static files permanently.
+               # You should do that in directories that will be found by staticfiles’s finders, 
+			# which by default, are 'static/' app sub-directories and any directories you include in STATICFILES_DIRS).
+
+          #STATICFILES_DIRS:
+               # This setting defines the additional locations the staticfiles app will traverse
+			# if the FileSystemFinder finder is enabled, e.g. if you use the collectstatic or 
+               # findstatic management command or use the static file serving view.
+               # This should be set to a list of strings that contain full paths to your 
+			 # additional files directory(ies) e.g.:
+                   # STATICFILES_DIRS = [
+                   # "/home/special.polls.com/polls/static",
+                   # "/home/polls.com/polls/static",
+                   # "/opt/webfiles/common",
+                   #]
+               # Note that these paths should use Unix-style forward slashes,
+			# even on Windows (e.g. "C:/Users/user/mysite/extra_static_content").
+
+          # MEDIA_ROOT:
+		    # Absolute filesystem path to the directory that will hold user-uploaded files.
+
+          # MEDIA_URL:
+		      # Default: '' (Empty string)
+		      # URL that handles the media served from MEDIA_ROOT, used for managing stored files.
+			# It must end in a slash if set to a non-empty value. You will need to configure these files
+               # to be served in both development and production environments.
+		      # If you want to use {{ MEDIA_URL }} in your templates, add 'django.template.context_processors.
+		      # media' in the 'context_processors' option of TEMPLATES.
+		      # Example: "http://media.example.com/"
+
+13. set static URL:
+    from from django.conf import settings
+	from django.conf.urls.static import static
+
+	if settings.DEBUG:
+		urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
+		urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+
+14. 如何使用static/static/css/main.css文件
+    1) 在home.html文件头部分，加上 {% load staicfiles %}
+	2) 在<head>中加入链接 <link rel='stylesheet' href="{% static 'css/main.css' %}" />
+
+15.创建base.html模板文件
+    {% block content %}
+	{% endblock %}
+
+	在子模板文件中
+	{% extends 'base.html' %}
+	在子文件中，
+	    {% block content %}
+	    {% endblock %}之外的内容，不会被render.
+
+16. add about.html
+    修改url.py, views.about, about.html
+	url(r'^about/$', views.about, name="about",)
+
+17. Using bootstrap in project.
+    css, js, etc
+	
+18. 用子html的形式，加载包含特定的网页元素的网页.
+    {% include 'navbar.html' %}
+	include:
+	# Loads a template and renders it with the current context. 
+    # This is a way of “including” other templates within a template.
+	
+	在网页中，设置链接的方式 <li><a href="{% url 'home' %}">Home</a></li>
+
+19.在html中设置条件判断:
+       {% url 'home' as home %}
+	   {% url 'about' as about %}
+	   {% url 'contact' as contact %}
+	   <li {% if request.path == home %} class="active" {% endif %}><a href="{% url 'home' %}">Home</a></li>
+	   <li {% if request.path == about %} class="active" {% endif %}><a href="{% url 'about' %}">About</a></li>
+	   <li {% if request.path == contact %} class="active" {% endif %}><a href="{% url 'contact' %}">Contact</a></li>
+
+20. 创建contact app
+	 1) python manage.py startapp contact
+	 2) add the 'contact' to INSTALLED_APPS settings.
+	 3) add url pattern.
+
+	 from profiles import views as profiles_views
+	 from contact import views as contact_views
+	 from checkout import views as checkout_views
+
+	 urlpatterns = [
+	      url(r'^admin/', admin.site.urls),
+		url(r'^$', profiles_views.home, name='home'),
+		 url(r'^about/$', profiles_views.about, name='about'),
+		 url(r'^profile/$', profiles_views.userProfile, name='profile'),
+		 url(r'^checkout/$', checkout_views.checkout, name='checkout'),
+		 url(r'^contact/$', contact_views.contact, name='contact'),
+		url(r'^accounts/', include('allauth.urls')),
+	]
+
+	4) 创建contact form. 
+		a. 创建forms.py
+			from django import forms
+
+			class contactForm(forms.Form):
+
+				name = forms.CharField(required = False, max_length = 100, help_text = "100 characters max.")
+				email = forms.EmailField(required = True)
+				comment = forms.CharField(required = True, widget = forms.Textarea)
+
+		b.handle the forms in views.py
+
+		from django.shortcuts import render
+		from django.core.mail import send_mail
+		from django.conf import settings
+		
+		from .forms import contactForm
+
+		# Create your views here.
+			def contact(request):
+				title = 'Contact'
+				form = contactForm(request.POST or None)
+				confirm_message = None
+				if form.is_valid():
+					print form.cleaned_data
+					name = form.cleaned_data['name']
+					comment = form.cleaned_data['comment']
+					subject = "Message from my website."
+					message = "%s %s" %(comment, name)
+					emailTo = [form.cleaned_data['email']]
+					emailFrom = settings.EMAIL_HOST_USER
+					print subject, message, emailFrom, emailTo
+
+					title = "Thanks!"
+					confirm_message = "Thanks for the message, we will get right back to you."
+					form = None
+					temp = send_mail(subject, message, emailFrom, emailTo, fail_silently = False)															   if temp == 1:																															      print "send mail success."				
+					else:																																	       print "send mail fail."	
+				context = {'title': title, 'form': form, 'confirm_message': confirm_message, }
+				template = "contact.html"
+				return render(request, template, context)
+
+		c. edit the contact.html
+			{% extends 'base.html' %}
+			{% load crispy_forms_tags %}
+			{% block content %}
+			<div class="row">
+				<div class="col-sm-6 col-sm-offset-3">
+					<h1>{{ title }} </h1>	
+						{% if confirm_message %}
+							<p>{{confirm_message}}</p>
+						{% endif %}
+						
+						 {% if form %}
+							<form method="POST" action="">
+							% csrf_token %}
+							{{form | crispy}}
+								<input type='submit' value='submit form' class = 'btn btn-default' /></form>
+						{% endif %}
+				</div>
+			</div>
+			{% endblock%}
+			
+21. send email using django
+    1) add email settings in settings.py
+		EMAIL_HOST = 'smtp.126.com'
+		EMAIL_HOST_USER = 'yangkunjmd@126.com'
+		EMAIL_HOST_PASSWORD = '123456A'
+		EMAIL_PORT = '25'
+		EMAIL_USE_TLS = True
+		
+22. 使用crispy-form来美化django的form, 只能用来美化django的form.
+	django-crispy-forms is a Django application that lets you easily build, customize and reuse forms 
+	using your favorite CSS framework, without writing template code and without having to take care of 
+	annoying details. You are currently looking at the documentation of the development release.	
+	1) pip install --upgrade django-crispy-forms;
+	2) add "crispy_forms" to INSTALLED_APPS; 
+	3) 在settings.py中加入: CRISPY_TEMPLATE_PACK = 'bootstrap3'
+    4) 在contact.html中加入:{% load crispy_forms_tags %},用 {{form | crispy}}此句话代替{{form.as_p}}
+
+23. 使用django-allauth来实现用户验证登陆
+    1) pip install django-allauth
+	2) add the following code to settings.py
+		AUTHENTICATION_BACKENDS = (
+			# Needed to login by username in Django admin, regardless of `allauth`
+		    'django.contrib.auth.backends.ModelBackend',
+			# `allauth` specific authentication methods, such as login by e-mail
+		    'allauth.account.auth_backends.AuthenticationBackend',
+			)
+    3) add this code to settings.py INSTALLED_APPS section.
+		 'django.contrib.sites',
+		'allauth',
+		'allauth.account',
+		'allauth.socialaccount',
+		'allauth.socialaccount.providers.weixin',
+		'checkout', 
+		'stripe',
+
+	4) add SITE_ID = 1 to the bottom of settings.py 
+
+	5) 将下面的URL添加到url.py
+		url(r'^accounts/', include('allauth.urls'));
+
+	6) copy these settings to settings.py
+		LOGIN_URL = '/accounts/login/'
+		LOGIN_REDIRECT_URL = '/'
+
+		ACCOUNT_AUTHENTICATION_METHOD = "username_email"
+		ACCOUNT_CONFIRM_EMAIL_ON_GET = False
+		ACCOUNT_EMAIL_CONFIRMATION_ANONYMOUS_REDIRECT_URL = LOGIN_URL
+		ACCOUNT_EMAIL_CONFIRMATION_AUTHENTICATED_REDIRECT_URL = None
+
+		ACCOUNT_EMAIL_CONFIRMATION_EXPIRE_DAYS = 3
+		ACCOUNT_EMAIL_REQUIRED = False
+		ACCOUNT_EMAIL_VERIFICATION = None
+		ACCOUNT_EMAIL_SUBJECT_PREFIX = "My subject:"
+		ACCOUNT_DEFAULT_HTTP_PROTOCOL = "http"
+
+		ACCOUNT_LOGOUT_ON_GET = False
+		ACCOUNT_LOGOUT_REDIRECT_URL = "/"
+		ACCOUNT_SIGNUP_FORM_CLASS = None
+		ACCOUNT_SIGNUP_PASSWORD_ENTER_TWICE = True
+		ACCOUNT_UNIQUE_EMAIL = True 
+		ACCOUNT_USER_MODEL_USERNAME_FIELD = "username"
+		ACCOUNT_USER_MODEL_EMAIL_FIELD = "email"
+
+		ACCOUNT_USERNAME_MIN_LENGTH = 5
+		ACCOUNT_USERNAME_BLACKLIST = []
+		ACCOUNT_USERNAME_REQUIRED = True
+		ACCOUNT_PASSWORD_INPUT_RENDER_VALUE = False
+		ACCOUNT_PASSWORD_MIN_LENGTH = 5
+		ACCOUNT_LOGIN_ON_EMAIL_CONFIRMATION = True
+
+	7)custom the allauth templates. github allauth/templates/account
+	      在profiles/templates下建立account文件夹，将signup.html， login.html等，copy到此文件夹下
+		同时用crispy来美化相关的表单, 增加一些判断.
+		{% if not request.user.is_authenticated %}
+			<li><a href="{% url 'account_login' %}">Login</a></li>
+			<li><a href="{% url 'account_signup' %}">Signup</a></li>
+		{% else %}
+			<li><a href="{% url 'account_logout' %}">Logout</a></li>
+		{% endif %}
+
+	8) Using the login_required decorator
+
+		from django.contrib.auth.decorators import login_required
+
+		@login_required
+		def userProfile(request):
+			user = request.user
+			context = {"user" : user}
+			template = "profile.html"
+			return render(request, template, context)
+
+          add profile.html来显示这些只有在登陆之后才能看到的信息
+
+24. add img to templates
+    1) {% load staticfiles %}
+	2)	<div class="col-md-4">
+			<a href=""> <img src="{% static 'img/home.jpg' %}" class="img-responsive" /></a>
+		</div>
+
+25. Payments
